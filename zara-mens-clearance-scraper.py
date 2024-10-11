@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from playwright.sync_api import Page, expect
 from playwright.sync_api import Playwright, sync_playwright
 import pytest
@@ -45,7 +45,7 @@ def scrape_clearance_items(url):
             html = page.content()
 
             # Close the browser
-            browser.close()
+            # browser.close()
 
     # Parse the page source using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
@@ -65,7 +65,20 @@ def scrape_clearance_items(url):
 
     for p in product_grids:
         # Get product name
-        name = p.find('h3').text
+        try:
+            name = p.find('a', class_='product-link _item product-grid-product-info__name link').text.strip()
+        except:
+            name = "Name not found"
+
+        # Use a regular expression to match part of the class name
+        image = soup.find("img", class_=re.compile("media-image__image"))
+
+        if image:
+            image_src = image.get("src")
+            # print(f"Image URL: {image_src}")
+        else:
+            image_src = "Image not found"
+            # print("Image not found")
 
         # Get discounted amount
         discount = p.find('span', class_='price-current__discount-percentage').text.strip()
@@ -77,13 +90,14 @@ def scrape_clearance_items(url):
         # Get current price
         curr_price = p.find('span', class_='price-current__amount').text.strip()
 
-         # Get previous price
+        # Get previous price
         prev_price = p.find('span', class_='price-old__amount').text.strip()
 
         # Current time and date
         now = datetime.now()
         # Print the extracted information
         print(f"Name: {name}")
+        print(f"Image: {image_src}")
         print(f"Discount: {discount}")
         print(f"Link: {link}")
         print(f"Current Price: {curr_price}")
@@ -99,7 +113,7 @@ def scrape_clearance_items(url):
             'prev_price': prev_price
         }
         items.append(item)
-        
+
         # Loop through the items in the database
         for item in items:
             # Check if the item already exists in the database
@@ -111,9 +125,6 @@ def scrape_clearance_items(url):
             else:
                 # If the item doesn't exist, insert a new record
                 c.execute(f"INSERT INTO {TABLE_NAME} (name, discount, link, curr_price, prev_price) VALUES (?, ?, ?, ?, ?)", (item['name'], item['discount'], item['link'], item['curr_price'], item['prev_price']))
-
-        
-
 
     # Commit the changes and close the connection
     conn.commit()
@@ -134,7 +145,7 @@ class MainWindow(tk.Tk):
         self.label.pack(pady=10)
 
         # Add a button to the window.
-        self.button = tk.Button(self, text="Scrape Marketplace", command=self.scrape)
+        self.button = tk.Button(self, text="Scrape Zara", command=self.scrape)
         self.button.pack(pady=10)
         
         # Add a label to write "Developed by" to the window.
@@ -158,6 +169,3 @@ class MainWindow(tk.Tk):
 if __name__ == "__main__":
     app = MainWindow()
     app.mainloop()
-    
-
-
